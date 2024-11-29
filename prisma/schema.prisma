@@ -1,0 +1,73 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int        @id @default(autoincrement())
+  name     String
+  email    String
+  password String
+  roles    UserRole[] // Multiple roles per user
+  Response Response[]
+}
+
+model UserRole {
+  id     Int  @id @default(autoincrement())
+  name   Role @default(USER)
+  userId Int
+  user   User @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Quiz {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  questions   Question[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Question {
+  id              String     @id @default(cuid())
+  text            String
+  quiz            Quiz       @relation(fields: [quizId], references: [id])
+  quizId          String
+  options         Option[]
+  correctOptionId String?    @unique 
+  response        Response[]
+}
+
+model Option {
+  id         String     @id @default(cuid())
+  text       String
+  question   Question   @relation(fields: [questionId], references: [id])
+  questionId String
+  Response   Response[]
+}
+
+model Response {
+  id               String   @id @default(cuid())
+  userId           Int
+  user             User     @relation(fields: [userId], references: [id])
+  question         Question[]
+  questionId       String
+  selectedOptionId String
+  selectedOption   Option   @relation(fields: [selectedOptionId], references: [id])
+  createdAt        DateTime @default(now())
+}
