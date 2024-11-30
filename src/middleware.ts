@@ -6,12 +6,13 @@ export function authMiddleware(
   res: Response,
   next: NextFunction
 ):any {
-  const token = req.headers.authentication as unknown as string;
+  const authHeader = req.headers.authorization as unknown as string;
+  const token = authHeader.split(" ")[1];
+  
 
 try {
      const payload = jwt.verify(token, "jwtsecret");
      //@ts-ignore
-
      req.id = payload.id;
 
      next();

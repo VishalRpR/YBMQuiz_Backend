@@ -20,6 +20,8 @@ model User {
   password String
   roles    UserRole[] // Multiple roles per user
   Response Response[]
+  Quiz     Quiz[]
+  Marks    Marks[]
 }
 
 model UserRole {
@@ -40,7 +42,10 @@ model Quiz {
   description String?
   questions   Question[]
   createdAt   DateTime   @default(now())
+  userId      Int
+  user        User?      @relation(fields: [userId], references: [id])
   updatedAt   DateTime   @updatedAt
+  Marks       Marks[]
 }
 
 model Question {
@@ -49,7 +54,7 @@ model Question {
   quiz            Quiz       @relation(fields: [quizId], references: [id])
   quizId          String
   options         Option[]
-  correctOptionId String?    @unique 
+  correctOptionId String?    @unique
   response        Response[]
 }
 
@@ -62,12 +67,28 @@ model Option {
 }
 
 model Response {
-  id               String   @id @default(cuid())
+  id               String     @id @default(cuid())
   userId           Int
-  user             User     @relation(fields: [userId], references: [id])
+  user             User       @relation(fields: [userId], references: [id])
   question         Question[]
   questionId       String
   selectedOptionId String
-  selectedOption   Option   @relation(fields: [selectedOptionId], references: [id])
-  createdAt        DateTime @default(now())
+  selectedOption   Option     @relation(fields: [selectedOptionId], references: [id])
+  score            mark         @default(INCORRECT)
+  createdAt        DateTime   @default(now())
+}
+
+model Marks {
+  id     String @id @default(cuid())
+  userId Int
+  user   User   @relation(fields: [userId], references: [id])
+  quizId String
+  quiz   Quiz   @relation(fields: [quizId], references: [id])
+  total  Int
+  createdAt    DateTime             @default(now())
+}
+
+enum mark {
+  CORRECT
+  INCORRECT
 }

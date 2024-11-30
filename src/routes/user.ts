@@ -8,6 +8,7 @@ const router = Router();
 
 const signuphandler: any = async (req: Request, res: Response) => {
   const body = req.body;
+ 
   const parseddata = SignupSchema.safeParse(body);
 
   if (!parseddata.success) {
@@ -23,7 +24,7 @@ const signuphandler: any = async (req: Request, res: Response) => {
     },
   });
 
-  if (!userExist) {
+  if (userExist) {
     return res.status(403).json({
       message: "Sorry credentials are incorrect",
     });
@@ -46,6 +47,7 @@ router.post("/signup", signuphandler);
 
 const signinhandler: any = async (req: Request, res: Response) => {
   const body = req.body;
+  
   const parseddata = SigninSchema.safeParse(body);
 
   if (!parseddata.success) {

@@ -1,9 +1,16 @@
 import express from "express";
 import { v1router } from "./routes/question";
+import { quizrouter } from "./routes/quiz";
+import cors from "cors"
+import { userRouter } from "./routes/user";
+import { palyquizrouter } from "./routes/playquiz";
 const app = express();
-
+app.use(cors());
 app.use(express.json());
 app.use("/api/v1", v1router);
+app.use("/api/v1", userRouter);
+app.use("/api/v1", quizrouter);
+app.use("/api/v1", palyquizrouter);
 app.use(
   (
     err: any,

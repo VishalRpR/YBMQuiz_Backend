@@ -9,48 +9,58 @@ const router = Router();
 router.post("/quiz/:quizId", authMiddleware, async (req, res) => {
   const { text, options, correctOptionId } = req.body;
 
-  // Create the question
-  const question = await client.question.create({
-    data: {
-      text,
-      quizId: req.params.quizId,
-    },
-  });
+  let mainOption = correctOptionId;
 
-  // Create options for the question
-  for (let i = 0; i < options.length; i++) {
-    await client.option.create({
+  // Create the question
+  const result = await client.$transaction(async (tx) => {
+    const question = await tx.question.create({
       data: {
-        text: options[i].text,
-        questionId: question.id,
+        text,
+        quizId: req.params.quizId,
       },
     });
-  }
 
-  // Update the correct option
-  const updatedQuestion = await client.question.update({
-    where: {
-      id: question.id,
-    },
-    data: {
-      correctOptionId,
-    },
+    // Create options for the question
+    for (let i = 0; i < options.length; i++) {
+      const optionid = await tx.option.create({
+        data: {
+          text: options[i].text,
+          questionId: question.id,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (correctOptionId == options[i].id) {
+        mainOption = optionid.id;
+      }
+    }
+
+    // Update the correct option
+    const updatedQuestion = await tx.question.update({
+      where: {
+        id: question.id,
+      },
+      data: {
+        correctOptionId: mainOption,
+      },
+    });
+
+    return updatedQuestion;
   });
 
   res.json({
     message: "Question added successfully",
-    question: updatedQuestion,
+    question: result,
   });
 });
 
 // Get a question and its options
-//@ts-ignore
-router.get("/quiz/:quizId", authMiddleware, async (req, res) => {
-  const questionId = req.query.questionId as string; // Use query parameter to get the questionId
-  const question = await client.question.findFirst({
+router.get("/quiz/:quizId", authMiddleware, async (req:any, res:any) => {
+  const question = await client.question.findMany({
     where: {
       quizId: req.params.quizId,
-      id: questionId,
     },
     include: {
       options: true,
@@ -67,8 +77,7 @@ router.get("/quiz/:quizId", authMiddleware, async (req, res) => {
 });
 
 // Update a question
-//@ts-ignore
-router.put("/quiz/:quizId/:questionId", authMiddleware, async (req, res) => {
+router.put("/quiz/:quizId/:questionId", authMiddleware, async (req:any, res:any) => {
   const { text, options, correctOptionId } = req.body;
   const { quizId, questionId } = req.params;
 
@@ -96,23 +105,29 @@ router.put("/quiz/:quizId/:questionId", authMiddleware, async (req, res) => {
   });
 
   // Recreate options
+  let mainOption = correctOptionId;
   for (let i = 0; i < options.length; i++) {
-    await client.option.create({
+    if(options[i].text==""){continue}
+       const optionid = await client.option.create({
       data: {
         text: options[i].text,
         questionId: updatedQuestion.id,
       },
     });
+
+    if (correctOptionId === options[i].id) {
+      mainOption = optionid.id;
+    }
   }
 
   // Update the correct option
-  if (correctOptionId) {
+  if (mainOption) {
     await client.question.update({
       where: {
         id: questionId,
       },
       data: {
-        correctOptionId,
+        correctOptionId: mainOption,
       },
     });
   }
@@ -124,8 +139,7 @@ router.put("/quiz/:quizId/:questionId", authMiddleware, async (req, res) => {
 });
 
 // Delete a question
-//@ts-ignore
-router.delete("/quiz/:quizId/:questionId", authMiddleware, async (req, res) => {
+router.delete("/quiz/:quizId/:questionId", authMiddleware, async (req:any, res:any) => {
   const { quizId, questionId } = req.params;
 
   // Find the question to delete
