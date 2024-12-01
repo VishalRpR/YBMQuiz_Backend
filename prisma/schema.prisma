@@ -74,18 +74,21 @@ model Response {
   questionId       String
   selectedOptionId String
   selectedOption   Option     @relation(fields: [selectedOptionId], references: [id])
-  score            mark         @default(INCORRECT)
+  markId           String
+  mark             Marks      @relation(fields: [markId], references: [id])
+  score            mark       @default(INCORRECT)
   createdAt        DateTime   @default(now())
 }
 
 model Marks {
-  id     String @id @default(cuid())
-  userId Int
-  user   User   @relation(fields: [userId], references: [id])
-  quizId String
-  quiz   Quiz   @relation(fields: [quizId], references: [id])
-  total  Int
-  createdAt    DateTime             @default(now())
+  id        String     @id @default(cuid())
+  userId    Int
+  user      User       @relation(fields: [userId], references: [id])
+  quizId    String
+  quiz      Quiz       @relation(fields: [quizId], references: [id])
+  total     Int        @default(0)
+  createdAt DateTime   @default(now())
+  response  Response[]
 }
 
 enum mark {
