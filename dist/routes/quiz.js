@@ -32,7 +32,6 @@ router.post("/quiz/", middleware_1.authMiddleware, (req, res) => __awaiter(void 
 ///user Specific quiz
 //@ts-ignore
 router.get("/quiz/", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("here");
     const quizes = yield client.quiz.findMany({
         where: {
             userId: req.id
@@ -53,7 +52,6 @@ router.get("/quiz/", middleware_1.authMiddleware, (req, res) => __awaiter(void 0
 }));
 //get all the quiz for quizing
 router.get("/quizzes/", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("here");
     const quizes = yield client.quiz.findMany({});
     if (!quizes) {
         return res.status(404).json({ message: "Question not found" });
