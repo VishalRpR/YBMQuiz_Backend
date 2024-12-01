@@ -5,14 +5,25 @@ import { PrismaClient } from "@prisma/client";
 const client = new PrismaClient();
 const router = Router();
 
-// Post question response
 router.post("/quizzes/:quizId", authMiddleware, async (req: any, res: any) => {
-  const { questionId, options, selectedOptionId } = req.body;
+  const { questionId, markId, selectedOptionId } = req.body;
+  let marker = markId;
 
   const result = await client.$transaction(async (tx) => {
+    if (markId == "") {
+      const mark = await tx.marks.create({
+        data: {
+          userId: req.id,
+          quizId: req.params.quizId,
+        },
+      });
+      marker = mark.id;
+    }
+
     const question = await tx.response.create({
       data: {
         userId: req.id,
+        markId: marker,
         questionId: questionId,
         selectedOptionId: selectedOptionId,
       },
@@ -27,30 +38,23 @@ router.post("/quizzes/:quizId", authMiddleware, async (req: any, res: any) => {
       },
     });
 
-    if (correctresponse?.correctOptionId == question.selectedOptionId) {
-      const res = await tx.response.update({
-        where: { id: question.id },
-        data: {
-          score: "CORRECT",
-        },
-      });
-      
+    let score = "INCORRECT"; // Default score is "INCORRECT"
 
-      return 1;
-    } else {
-      const res = await tx.response.update({
+    if (correctresponse?.correctOptionId === question.selectedOptionId) {
+      score = "CORRECT"; // Correct answer
+      await tx.response.update({
         where: { id: question.id },
-        data: {
-          score: "INCORRECT",
-        },
+        data: { score: "CORRECT" }, // Storing "CORRECT" or "INCORRECT"
       });
-      return 0;
     }
+
+    return score;
   });
 
   res.json({
     message: "Question added successfully",
-    question: result,
+    result: result,
+    marker,
   });
 });
 
@@ -76,13 +80,16 @@ router.get("/quizzes/:quizId", authMiddleware, async (req: any, res: any) => {
 
 // Post Marks to Marks
 router.post("/marks/:quizId", authMiddleware, async (req: any, res: any) => {
-  const { totalMarks } = req.body;
+  const { totalMarks, markid } = req.body;
 
-  const mark = await client.marks.create({
-    data: {
+  const mark = await client.marks.update({
+    where: {
       userId: req.id,
-      total: totalMarks,
       quizId: req.params.quizId,
+      id: markid,
+    },
+    data: {
+      total: totalMarks,
     },
   });
 
@@ -93,24 +100,30 @@ router.post("/marks/:quizId", authMiddleware, async (req: any, res: any) => {
 });
 
 router.get("/marks", authMiddleware, async (req: any, res: any) => {
-      console.log("here")
   const ress = await client.marks.findMany({
-   where:{
-    userId:req.id
-   },include:{
-    quiz:{
-        include:{
-            questions:true
-        }
-    }
-    }
-   
+    where: {
+      userId: req.id,
+    },
+    include: {
+      quiz: {
+        include: {
+          questions: {
+            include: {
+              options: true, // Include all options for the question
+            },
+          },
+        },
+      },
+      response: {
+        include: {
+          selectedOption: true,
+        },
+      },
+    },
   });
 
-  console.log(ress)
-
   res.json({
-    message: "marks added successfully",
+    message: "marks fetched successfully",
     mark: ress,
   });
 });

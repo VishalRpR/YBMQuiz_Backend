@@ -15,13 +15,23 @@ const middleware_1 = require("../middleware");
 const client_1 = require("@prisma/client");
 const client = new client_1.PrismaClient();
 const router = (0, express_1.Router)();
-// Post question response
 router.post("/quizzes/:quizId", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { questionId, options, selectedOptionId } = req.body;
+    const { questionId, markId, selectedOptionId } = req.body;
+    let marker = markId;
     const result = yield client.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        if (markId == "") {
+            const mark = yield tx.marks.create({
+                data: {
+                    userId: req.id,
+                    quizId: req.params.quizId,
+                },
+            });
+            marker = mark.id;
+        }
         const question = yield tx.response.create({
             data: {
                 userId: req.id,
+                markId: marker,
                 questionId: questionId,
                 selectedOptionId: selectedOptionId,
             },
@@ -34,28 +44,20 @@ router.post("/quizzes/:quizId", middleware_1.authMiddleware, (req, res) => __awa
                 correctOptionId: true,
             },
         });
-        if ((correctresponse === null || correctresponse === void 0 ? void 0 : correctresponse.correctOptionId) == question.selectedOptionId) {
-            const res = yield tx.response.update({
+        let score = "INCORRECT"; // Default score is "INCORRECT"
+        if ((correctresponse === null || correctresponse === void 0 ? void 0 : correctresponse.correctOptionId) === question.selectedOptionId) {
+            score = "CORRECT"; // Correct answer
+            yield tx.response.update({
                 where: { id: question.id },
-                data: {
-                    score: "CORRECT",
-                },
+                data: { score: "CORRECT" }, // Storing "CORRECT" or "INCORRECT"
             });
-            return 1;
         }
-        else {
-            const res = yield tx.response.update({
-                where: { id: question.id },
-                data: {
-                    score: "INCORRECT",
-                },
-            });
-            return 0;
-        }
+        return score;
     }));
     res.json({
         message: "Question added successfully",
-        question: result,
+        result: result,
+        marker,
     });
 }));
 //Get quiz to play
@@ -77,12 +79,15 @@ router.get("/quizzes/:quizId", middleware_1.authMiddleware, (req, res) => __awai
 }));
 // Post Marks to Marks
 router.post("/marks/:quizId", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { totalMarks } = req.body;
-    const mark = yield client.marks.create({
-        data: {
+    const { totalMarks, markid } = req.body;
+    const mark = yield client.marks.update({
+        where: {
             userId: req.id,
-            total: totalMarks,
             quizId: req.params.quizId,
+            id: markid,
+        },
+        data: {
+            total: totalMarks,
         },
     });
     res.json({
@@ -91,21 +96,29 @@ router.post("/marks/:quizId", middleware_1.authMiddleware, (req, res) => __await
     });
 }));
 router.get("/marks", middleware_1.authMiddleware, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    console.log("here");
     const ress = yield client.marks.findMany({
         where: {
-            userId: req.id
-        }, include: {
+            userId: req.id,
+        },
+        include: {
             quiz: {
                 include: {
-                    questions: true
-                }
-            }
-        }
+                    questions: {
+                        include: {
+                            options: true, // Include all options for the question
+                        },
+                    },
+                },
+            },
+            response: {
+                include: {
+                    selectedOption: true,
+                },
+            },
+        },
     });
-    console.log(ress);
     res.json({
-        message: "marks added successfully",
+        message: "marks fetched successfully",
         mark: ress,
     });
 }));
