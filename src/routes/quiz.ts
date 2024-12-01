@@ -25,7 +25,7 @@ router.post("/quiz/", authMiddleware, async (req: any, res: any) => {
 ///user Specific quiz
 //@ts-ignore
 router.get("/quiz/", authMiddleware, async (req:any, res:any) => {
-  console.log("here");
+ 
   const quizes = await client.quiz.findMany({
     where:{
       userId:req.id
@@ -53,7 +53,7 @@ router.get("/quiz/", authMiddleware, async (req:any, res:any) => {
 
 //get all the quiz for quizing
 router.get("/quizzes/", authMiddleware, async (req: any, res: any) => {
-  console.log("here");
+ 
   const quizes = await client.quiz.findMany({
     
   });
